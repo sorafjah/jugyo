@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>秋の植物クイズ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Maru+Gothic:wght@500;900&display=swap">
+<style>
+/* Layout idea: one question per screen, big type on a pale ground, quiet leaf drawing on the right.
+   Single theme on purpose: a projector in a bright classroom needs high contrast. */
+:root {
+  --paper: #F2F5F0;
+  --ink: #1B2A22;
+  --maple: #B5342B;
+  --ginkgo: #F2C230;
+  --moss: #4F8A5B;
+  --bark: #8A5E34;
+  --u: min(1vw, 1.7778vh);
+  --body: 'BIZ UDPGothic', 'Hiragino Sans', 'Meiryo', sans-serif;
+  --display: 'Zen Maru Gothic', 'BIZ UDPGothic', 'Hiragino Sans', 'Meiryo', sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+ruby { ruby-position: over; }
+rt { font-size: 0.42em; font-weight: 400; letter-spacing: 0.02em; }
+
+.app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: calc(var(--u) * 2) calc(var(--u) * 4);
+  gap: calc(var(--u) * 1);
+}
+
+.top { display: flex; justify-content: space-between; align-items: center; min-height: calc(var(--u) * 3); }
+.brand { font-family: var(--display); font-weight: 900; font-size: calc(var(--u) * 2.2); line-height: 1.8; }
+.dots { display: flex; gap: calc(var(--u) * 1); list-style: none; margin: 0; padding: 0; }
+.dots li {
+  width: calc(var(--u) * 1.6); height: calc(var(--u) * 1.6);
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+}
+.dots li.done { background: var(--ink); }
+.dots li.now { background: var(--maple); border-color: var(--maple); transform: scale(1.35); }
+
+.stage { display: flex; align-items: center; min-height: 0; cursor: pointer; }
+.screen { width: 100%; }
+
+/* question screen */
+.q { display: grid; grid-template-columns: 1.75fr 1fr; gap: calc(var(--u) * 4); align-items: center; }
+.qhead { display: flex; align-items: center; gap: calc(var(--u) * 1.2); margin-bottom: calc(var(--u) * 0.6); }
+.num {
+  width: calc(var(--u) * 5.4); height: calc(var(--u) * 5.4);
+  border-radius: 50%; background: var(--maple); color: #fff;
+  font-family: var(--display); font-weight: 900; font-size: calc(var(--u) * 3.4);
+  display: grid; place-items: center; line-height: 1;
+}
+.qlabel { font-family: var(--display); font-weight: 900; font-size: calc(var(--u) * 2.4); color: var(--maple); }
+.qtext { margin: 0 0 calc(var(--u) * 1.2); font-size: calc(var(--u) * 3.2); line-height: 1.8; font-weight: 700; text-wrap: balance; }
+.choices { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.choice {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+  gap: calc(var(--u) * 1.4);
+  padding: calc(var(--u) * 0.45) calc(var(--u) * 1.4);
+  border-bottom: 2px solid rgba(27, 42, 34, 0.18);
+  font-size: calc(var(--u) * 2.7); line-height: 1.75; font-weight: 700;
+  border-radius: calc(var(--u) * 1.4);
+  transition: opacity .3s, background-color .3s;
+}
+.choice .mark { font-size: calc(var(--u) * 3); }
+.choice .tag {
+  visibility: hidden;
+  background: var(--ink); color: var(--ginkgo);
+  font-family: var(--display); font-weight: 900; font-size: calc(var(--u) * 1.9);
+  padding: calc(var(--u) * 0.2) calc(var(--u) * 1.4); border-radius: 999px; line-height: 1.7;
+}
+.show .choice { opacity: 0.32; }
+.show .choice.is-answer { opacity: 1; background: var(--ginkgo); border-bottom-color: transparent; }
+.show .choice.is-answer .tag { visibility: visible; }
+.note {
+  margin: calc(var(--u) * 1.2) 0 0; min-height: calc(var(--u) * 8);
+  font-size: calc(var(--u) * 2.2); line-height: 1.9; font-weight: 700;
+  opacity: 0; transition: opacity .4s;
+}
+.show .note { opacity: 1; }
+.art svg { width: 100%; height: auto; max-height: calc(var(--u) * 40); display: block; }
+.reveal { opacity: 0; transition: opacity .5s; }
+.show .reveal { opacity: 1; }
+
+/* title and end */
+.cover { display: grid; grid-template-columns: 1.3fr 1fr; gap: calc(var(--u) * 4); align-items: center; }
+.cover h1 { margin: 0; font-family: var(--display); font-weight: 900; font-size: calc(var(--u) * 8.4); line-height: 1.7; }
+.cover .sub { margin: calc(var(--u) * 1) 0 0; font-size: calc(var(--u) * 3.4); font-weight: 700; line-height: 1.9; }
+.cover .hint { margin: calc(var(--u) * 3) 0 0; font-size: calc(var(--u) * 2.2); line-height: 1.9; color: #3B4A42; }
+
+.nav { display: flex; justify-content: space-between; align-items: center; min-height: calc(var(--u) * 6); }
+.btn {
+  font-family: var(--body); font-weight: 700; font-size: calc(var(--u) * 2.6); line-height: 1.8;
+  padding: calc(var(--u) * 0.4) calc(var(--u) * 3.6);
+  border-radius: 999px; border: 3px solid var(--ink); cursor: pointer;
+  background: transparent; color: var(--ink);
+}
+.btn.primary { background: var(--ink); color: var(--paper); }
+.btn:focus-visible { outline: 4px solid var(--maple); outline-offset: 3px; }
+.btn[hidden] { display: none; }
+.btn.ghost-hidden { visibility: hidden; }
+
+@media (max-width: 820px) {
+  :root { --u: 2.2vw; }
+  .q, .cover { grid-template-columns: 1fr; }
+  .art { display: none; }
+  body { overflow: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .choice, .note, .reveal { transition: none; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <g id="leaf">
+      <path d="M0 -90 C 62 -52 70 40 0 92 C -70 40 -62 -52 0 -90 Z" style="stroke:var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M0 -92 L0 118 M0 -20 L-34 -52 M0 20 L-40 -10 M0 -20 L34 -52 M0 20 L40 -10" fill="none" style="stroke:var(--ink)" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <g id="ginkgo">
+      <path d="M0 40 C -44 40 -62 8 -44 -16 C -30 -2 -14 -6 0 -22 C 14 -6 30 -2 44 -16 C 62 8 44 40 0 40 Z" style="stroke:var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M0 110 L0 40 M0 40 L-30 -2 M0 40 L0 -16 M0 40 L30 -2" fill="none" style="stroke:var(--ink)" stroke-width="4" stroke-linecap="round"/>
+    </g>
+  </defs>
+</svg>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><ruby>秋<rt>あき</rt></ruby>の <ruby>植物<rt>しょくぶつ</rt></ruby>クイズ</div>
+    <ol class="dots" id="dots" aria-label="すすみぐあい"></ol>
+  </header>
+  <main class="stage" id="stage" aria-live="polite"></main>
+  <footer class="nav">
+    <button class="btn" id="back" type="button">もどる</button>
+    <button class="btn primary" id="next" type="button">つぎへ</button>
+  </footer>
+</div>
+
+<script>
+// {漢字|よみ} を ruby タグに変える
+const ruby = (s) => s.replace(/\{([^|}]+)\|([^}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>');
+const MARKS = ['①', '②', '③', '④'];
+
+const QUESTIONS = [
+  {
+    q: '{触|さわ}ると「カサカサ」するのは どれ？',
+    choices: ['{水|みず}', '{落|お}ち{葉|ば}', 'ぬれた {草|くさ}'],
+    ans: 1,
+    note: 'かわいている ものは カサカサ。ぬれた ものは しっとり するね。',
+    art: `<svg viewBox="0 0 400 400" role="img" aria-label="かわいた おちば">
+      <path d="M30 345 L370 345" fill="none" style="stroke:var(--ink)" stroke-width="6" stroke-linecap="round"/>
+      <use href="#leaf" transform="translate(200 215) rotate(-38) scale(1.55)" fill="#8A5E34"/>
+      <path d="M62 100 q18 -22 36 0 M300 88 q18 -22 36 0 M308 150 q18 -22 36 0" fill="none" style="stroke:var(--ink)" stroke-width="6" stroke-linecap="round"/>
+    </svg>`
+  },
+  {
+    q: '{夏|なつ} {緑|みどり}だった {葉|は}っぱで、{変|か}わった ものが ある。どうなった？',
+    choices: ['{全部|ぜんぶ} なくなった', '{小|ちい}さく なった', '{赤|あか}や {黄色|きいろ}に なった'],
+    ans: 2,
+    note: '{赤|あか}や {黄色|きいろ}に なった {葉|は}も、{落|お}ちた {葉|は}も、{緑|みどり}のままの {葉|は}も あるね。',
+    art: `<svg viewBox="0 0 400 400" role="img" aria-label="みどりの 葉と、きいろと あかの 葉">
+      <use href="#leaf" transform="translate(70 205) rotate(-10) scale(0.9)" fill="#4F8A5B"/>
+      <g class="reveal">
+        <use href="#ginkgo" transform="translate(200 215) scale(1.05)" fill="#F2C230"/>
+        <use href="#leaf" transform="translate(330 205) rotate(14) scale(0.9)" fill="#B5342B"/>
+      </g>
+    </svg>`
+  },
+  {
+    q: '{落|お}ち{葉|ば}は なぜ たくさん {散|ち}らばっている？',
+    choices: ['{木|き}が {葉|は}っぱを {落|お}としたから', '{誰|だれ}かが {作|つく}ったから', '{虫|むし}が {持|も}ってきたから'],
+    ans: 0,
+    note: '{木|き}が {葉|は}っぱを {落|お}として、{冬|ふゆ}の じゅんびを するよ。',
+    art: `<svg viewBox="0 0 400 400" role="img" aria-label="はの すくない 木と、地めんの おちば">
+      <path d="M20 345 Q200 318 380 345" fill="none" style="stroke:var(--ink)" stroke-width="6" stroke-linecap="round"/>
+      <path d="M200 332 L200 160 M200 215 L150 160 M200 190 L256 132" fill="none" stroke="#8A5E34" stroke-width="18" stroke-linecap="round"/>
+      <use href="#leaf" transform="translate(150 140) rotate(-30) scale(0.32)" fill="#B5342B"/>
+      <use href="#leaf" transform="translate(256 114) rotate(25) scale(0.32)" fill="#F2C230"/>
+      <use href="#leaf" transform="translate(200 128) rotate(0) scale(0.32)" fill="#B5342B"/>
+      <use href="#leaf" transform="translate(80 336) rotate(70) scale(0.3)" fill="#B5342B"/>
+      <use href="#leaf" transform="translate(135 346) rotate(-30) scale(0.3)" fill="#F2C230"/>
+      <use href="#leaf" transform="translate(270 345) rotate(80) scale(0.3)" fill="#8A5E34"/>
+      <use href="#leaf" transform="translate(318 338) rotate(10) scale(0.3)" fill="#B5342B"/>
+      <use href="#leaf" transform="translate(205 352) rotate(-60) scale(0.3)" fill="#F2C230"/>
+      <use href="#leaf" transform="translate(355 346) rotate(40) scale(0.3)" fill="#8A5E34"/>
+    </svg>`
+  },
+  {
+    q: 'ずっと {緑|みどり}のままの {葉|は}っぱが あった。{本当|ほんとう}は？',
+    choices: ['{全部|ぜんぶ}の {木|き}が {赤|あか}く なる', '{作|つく}り{物|もの}だった', '{全部|ぜんぶ} {枯|か}れる', '{冬|ふゆ}も {緑|みどり}の {木|き}も ある'],
+    ans: 3,
+    note: '{冬|ふゆ}も {緑|みどり}の {木|き}が あるよ。{全部|ぜんぶ}の {木|き}が {同|おな}じに {変|か}わる わけじゃ ないね。',
+    art: `<svg viewBox="0 0 400 400" role="img" aria-label="みどりの 木">
+      <path d="M20 345 L380 345" fill="none" style="stroke:var(--ink)" stroke-width="6" stroke-linecap="round"/>
+      <path d="M180 345 L180 290 L220 290 L220 345 Z" fill="#8A5E34" style="stroke:var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M200 168 L305 292 L95 292 Z" fill="#4F8A5B" style="stroke:var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M200 112 L288 218 L112 218 Z" fill="#4F8A5B" style="stroke:var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M200 52 L268 148 L132 148 Z" fill="#4F8A5B" style="stroke:var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+    </svg>`
+  },
+  {
+    q: '{秋|あき}から {冬|ふゆ}になると、どうして {寒|さむ}く なる？',
+    choices: ['{太陽|たいよう}が {遠|とお}くに {行|い}って しまうから', '{木|き}の {葉|は}っぱが {落|お}ちるから', '{太陽|たいよう}が {低|ひく}く なって、{昼|ひる}が {短|みじか}く なるから'],
+    ans: 2,
+    note: '{太陽|たいよう}が {低|ひく}く なって、{昼|ひる}が {短|みじか}く なるので、あたたまりにくく なるよ。{太陽|たいよう}が {遠|とお}く なる わけでは ないよ。',
+    art: `<svg viewBox="0 0 400 400" role="img" aria-label="ひくい 太陽と、ながい かげ">
+      <path d="M0 340 L400 340" fill="none" style="stroke:var(--ink)" stroke-width="6" stroke-linecap="round"/>
+      <path d="M250 340 L60 340" fill="none" stroke="rgba(27,42,34,0.32)" stroke-width="16" stroke-linecap="round"/>
+      <path d="M250 340 L250 228" fill="none" style="stroke:var(--ink)" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="334" cy="288" r="38" fill="#F2C230" style="stroke:var(--ink)" stroke-width="5"/>
+      <g class="reveal">
+        <circle cx="206" cy="70" r="32" fill="none" style="stroke:var(--ink)" stroke-width="5" stroke-dasharray="10 10"/>
+        <path d="M244 88 C 330 110 360 170 352 238" fill="none" style="stroke:var(--ink)" stroke-width="5" stroke-dasharray="10 10" stroke-linecap="round"/>
+      </g>
+    </svg>`
+  }
+];
+
+// 画面の並び: 表紙 → (問題, こたえ) × 5 → おしまい
+const SCREENS = [{ t: 'title' }];
+QUESTIONS.forEach((_, i) => { SCREENS.push({ t: 'q', i, step: 0 }); SCREENS.push({ t: 'q', i, step: 1 }); });
+SCREENS.push({ t: 'end' });
+
+const stage = document.getElementById('stage');
+const dots = document.getElementById('dots');
+const backBtn = document.getElementById('back');
+const nextBtn = document.getElementById('next');
+let pos = 0;
+
+function titleHTML() {
+  return `<section class="screen cover">
+    <div>
+      <h1>${ruby('{秋|あき}の {植物|しょくぶつ}クイズ')}</h1>
+      <p class="sub">${ruby('{見|み}つけた ものを {思|おも}い{出|だ}そう')}</p>
+      <p class="hint">${ruby('「はじめる」ボタンか、→キーで {進|すす}むよ')}</p>
+    </div>
+    <div class="art">
+      <svg viewBox="0 0 400 400" role="img" aria-label="あかと きいろと ちゃいろの 葉">
+        <use href="#leaf" transform="translate(120 190) rotate(-25) scale(1.05)" fill="#B5342B"/>
+        <use href="#ginkgo" transform="translate(270 150) rotate(15) scale(1.1)" fill="#F2C230"/>
+        <use href="#leaf" transform="translate(240 310) rotate(60) scale(0.8)" fill="#8A5E34"/>
+      </svg>
+    </div>
+  </section>`;
+}
+
+function endHTML() {
+  return `<section class="screen cover">
+    <div>
+      <h1>おしまい！</h1>
+      <p class="sub">よく がんばったね</p>
+    </div>
+    <div class="art">
+      <svg viewBox="0 0 400 400" role="img" aria-label="あかと きいろの 葉">
+        <use href="#leaf" transform="translate(130 200) rotate(20) scale(1.05)" fill="#B5342B"/>
+        <use href="#ginkgo" transform="translate(280 200) rotate(-15) scale(1.1)" fill="#F2C230"/>
+      </svg>
+    </div>
+  </section>`;
+}
+
+function questionHTML(s) {
+  const q = QUESTIONS[s.i];
+  const show = s.step === 1;
+  const rows = q.choices.map((c, k) =>
+    `<li class="choice${k === q.ans ? ' is-answer' : ''}"><span class="mark">${MARKS[k]}</span><span>${ruby(c)}</span><span class="tag">こたえ</span></li>`
+  ).join('');
+  return `<section class="screen q${show ? ' show' : ''}">
+    <div>
+      <div class="qhead"><span class="num">${s.i + 1}</span><span class="qlabel">もんだい</span></div>
+      <h1 class="qtext">${ruby(q.q)}</h1>
+      <ol class="choices">${rows}</ol>
+      <p class="note">${ruby(q.note)}</p>
+    </div>
+    <div class="art">${q.art}</div>
+  </section>`;
+}
+
+function render() {
+  const s = SCREENS[pos];
+  stage.innerHTML = s.t === 'title' ? titleHTML() : s.t === 'end' ? endHTML() : questionHTML(s);
+
+  dots.innerHTML = QUESTIONS.map((_, i) => {
+    let cls = '';
+    if (s.t === 'end') cls = 'done';
+    else if (s.t === 'q') cls = i < s.i ? 'done' : i === s.i ? 'now' : '';
+    return `<li class="${cls}"></li>`;
+  }).join('');
+
+  backBtn.classList.toggle('ghost-hidden', pos === 0);
+  nextBtn.innerHTML = s.t === 'title' ? 'はじめる'
+    : s.t === 'end' ? 'もういちど'
+    : s.step === 0 ? ruby('{答|こた}えを {見|み}る')
+    : 'つぎへ';
+}
+
+function go(delta) {
+  if (delta > 0 && pos === SCREENS.length - 1) pos = 0;
+  else pos = Math.min(SCREENS.length - 1, Math.max(0, pos + delta));
+  render();
+}
+
+nextBtn.addEventListener('click', (e) => { e.stopPropagation(); go(1); });
+backBtn.addEventListener('click', (e) => { e.stopPropagation(); go(-1); });
+stage.addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.target instanceof HTMLButtonElement) return;
+  if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(1); }
+  else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(-1); }
+});
+
+// 更新しても今の場所を保つ
+function start(saved) {
+  const p = Number(saved && saved.pos);
+  pos = Number.isInteger(p) && p >= 0 && p < SCREENS.length ? p : 0;
+  render();
+}
+window.claude?.hot?.snapshot(() => ({ pos }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+</body>
+</html>
